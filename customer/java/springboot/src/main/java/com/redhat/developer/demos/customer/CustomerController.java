@@ -31,6 +31,13 @@ public class CustomerController {
 
     @Value("${preferences.api.url:http://preference:8080}")
     private String remoteURL;
+    
+    private static final String HOSTNAME = parseContainerIdFromHostname(
+            System.getenv().getOrDefault("HOSTNAME", "unknown"));
+
+    static String parseContainerIdFromHostname(String hostname) {
+        return hostname.replaceAll("recommendation-v\\d+-", "");
+    }
 
     @Autowired
     private Tracer tracer;
@@ -39,7 +46,7 @@ public class CustomerController {
         this.restTemplate = restTemplate;
         this.restTemplate.setHeaders("App-Version", this.getAppVersion());
     }
-
+    
     // SB 1.5.X actuator does not allow subpaths on custom health checks URL/do in easy way
     @RequestMapping("/health/ready")
     @ResponseStatus(HttpStatus.OK)
@@ -67,6 +74,7 @@ public class CustomerController {
             headers.add("AppVersion", this.version);
             restTemplate.setHeaders(headers);
             return restTemplate.postForEntity(remoteURL, body, String.class);
+            // TODO: ADD APPLCIATION HEADER VALUE 
         } catch (HttpStatusCodeException ex) {
             logger.warn("Exception trying to post to preference service.", ex);
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
@@ -88,7 +96,7 @@ public class CustomerController {
             if (userPreference != null && !userPreference.isEmpty()) {
                 tracer.activeSpan().setBaggageItem("user-preference", userPreference);
             }
-
+            // TODO: ADD APPLCIATION HEADER VALUE
             ResponseEntity<String> responseEntity = restTemplate.getForEntity(remoteURL, String.class);
             String response = responseEntity.getBody();
             HttpHeaders headers = new HttpHeaders();
