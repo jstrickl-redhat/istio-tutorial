@@ -1,6 +1,10 @@
 package com.redhat.developer.demos.customer;
 
 import io.opentracing.Tracer;
+import jdk.internal.net.http.common.HttpHeadersBuilder;
+
+import java.net.http.HttpHeaders;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,12 +25,13 @@ public class CustomerController {
 
     private static final String RESPONSE_STRING_FORMAT = "customer => %s\n";
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final java.util.logging.Logger logger = LoggerFactory.getLogger(getClass());
 
     private final RestTemplate restTemplate;
 
     @Value("${preferences.api.url:http://preference:8080}")
     private String remoteURL;
+    private String version = System.getenv("customerVersion");
 
     @Autowired
     private Tracer tracer;
@@ -49,6 +54,10 @@ public class CustomerController {
     @RequestMapping(value = "/", method = RequestMethod.POST, consumes = "text/plain")
     public ResponseEntity<String> addRecommendation(@RequestBody String body) {
         try {
+            logger.info("Adding Recommendation on version: " + this.version );
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("AppVersion", this.version);
+            restTemplate.setHeaders(headers);
             return restTemplate.postForEntity(remoteURL, body, String.class);
         } catch (HttpStatusCodeException ex) {
             logger.warn("Exception trying to post to preference service.", ex);
@@ -74,7 +83,9 @@ public class CustomerController {
 
             ResponseEntity<String> responseEntity = restTemplate.getForEntity(remoteURL, String.class);
             String response = responseEntity.getBody();
-            return ResponseEntity.ok(String.format(RESPONSE_STRING_FORMAT, response.trim()));
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("AppVersion", this.version);
+            return ResponseEntity.ok(String.format(RESPONSE_STRING_FORMAT, response.trim())).setHeaders(headers);
         } catch (HttpStatusCodeException ex) {
             logger.warn("Exception trying to get the response from preference service.", ex);
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)

@@ -25,6 +25,7 @@ public class RecommendationController {
      */
     private boolean misbehave = false;
 
+
     private static final String HOSTNAME = parseContainerIdFromHostname(
             System.getenv().getOrDefault("HOSTNAME", "unknown"));
 

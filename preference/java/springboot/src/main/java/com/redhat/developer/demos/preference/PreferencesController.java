@@ -24,6 +24,7 @@ public class PreferencesController {
 
     @Value("${recommendations.api.url:http://recommendations:8080}")
     private String remoteURL;
+    private String version = System.getenv("preferenceVersion");
 
     public PreferencesController(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
@@ -61,7 +62,9 @@ public class PreferencesController {
         try {
             ResponseEntity<String> responseEntity = restTemplate.getForEntity(remoteURL, String.class);
             String response = responseEntity.getBody();
-            return ResponseEntity.ok(String.format(RESPONSE_STRING_FORMAT, response.trim()));
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("AppVersion", this.version);
+            return ResponseEntity.ok(String.format(RESPONSE_STRING_FORMAT, response.trim())).setHeaders(headers);
         } catch (HttpStatusCodeException ex) {
             logger.warn("Exception trying to get the response from recommendation service.", ex);
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
