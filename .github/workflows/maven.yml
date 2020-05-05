@@ -24,4 +24,4 @@ jobs:
         java-version: 1.8
     - name: Build with Maven
       working-directory: ./customer/java/quarkus
-      run: mvn -B package --file pom.xml
+      run: mvn clean package -DskipTests -Pnative -Dquarkus.native.container-build=true
