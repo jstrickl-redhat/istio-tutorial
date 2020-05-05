@@ -1,5 +1,7 @@
 package com.redhat.developer.demos.preference;
 
+import com.sun.tools.javac.resources.version;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,10 +26,10 @@ public class PreferencesController {
 
     @Value("${recommendations.api.url:http://recommendations:8080}")
     private String remoteURL;
-    private String version = System.getenv("preferenceVersion");
 
     public PreferencesController(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
+        this.restTemplate.setHeaders("App-Version", this.getAppVersion());
     }
 
     // SB 1.5.X actuator does not allow subpaths on custom health checks URL/do in easy way
@@ -40,6 +42,14 @@ public class PreferencesController {
     @RequestMapping("/health/live")
     @ResponseStatus(HttpStatus.OK)
     public void live() {
+    }
+
+    public String getAppVersion() {
+        String version = System.getenv("preferenceVersion");
+        if (version == null || version.trim().isEmpty()) {
+            version = "unknown";
+        }
+        return version;
     }
 
     @RequestMapping(value = "/", method = RequestMethod.POST, consumes = "text/plain")

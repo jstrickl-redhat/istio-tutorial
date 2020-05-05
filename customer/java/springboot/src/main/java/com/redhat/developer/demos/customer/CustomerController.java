@@ -31,13 +31,13 @@ public class CustomerController {
 
     @Value("${preferences.api.url:http://preference:8080}")
     private String remoteURL;
-    private String version = System.getenv("customerVersion");
 
     @Autowired
     private Tracer tracer;
 
     public CustomerController(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
+        this.restTemplate.setHeaders("App-Version", this.getAppVersion());
     }
 
     // SB 1.5.X actuator does not allow subpaths on custom health checks URL/do in easy way
@@ -50,6 +50,14 @@ public class CustomerController {
     @RequestMapping("/health/live")
     @ResponseStatus(HttpStatus.OK)
     public void live() {}
+
+    public String getAppVersion() {
+        String version = System.getenv("customerVersion");
+        if (version == null || version.trim().isEmpty()) {
+            version = "unknown";
+        }
+        return version;
+    }
 
     @RequestMapping(value = "/", method = RequestMethod.POST, consumes = "text/plain")
     public ResponseEntity<String> addRecommendation(@RequestBody String body) {
