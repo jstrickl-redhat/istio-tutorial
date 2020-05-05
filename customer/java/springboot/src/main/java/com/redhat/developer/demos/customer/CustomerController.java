@@ -1,9 +1,7 @@
 package com.redhat.developer.demos.customer;
 
 import io.opentracing.Tracer;
-import jdk.internal.net.http.common.HttpHeadersBuilder;
 
-import java.net.http.HttpHeaders;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +23,7 @@ public class CustomerController {
 
     private static final String RESPONSE_STRING_FORMAT = "customer => %s\n";
 
-    private final java.util.logging.Logger logger = LoggerFactory.getLogger(getClass());
+    private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final RestTemplate restTemplate;
 
@@ -44,7 +42,6 @@ public class CustomerController {
 
     public CustomerController(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
-        this.restTemplate.setHeaders("App-Version", this.getAppVersion());
     }
     
     // SB 1.5.X actuator does not allow subpaths on custom health checks URL/do in easy way
@@ -69,12 +66,14 @@ public class CustomerController {
     @RequestMapping(value = "/", method = RequestMethod.POST, consumes = "text/plain")
     public ResponseEntity<String> addRecommendation(@RequestBody String body) {
         try {
-            logger.info("Adding Recommendation on version: " + this.version );
+            logger.info("Adding Recommendation on version: " + this.getAppVersion() );
+            
+            String response = restTemplate.postForEntity(remoteURL, body, String.class).getBody();
             HttpHeaders headers = new HttpHeaders();
-            headers.add("AppVersion", this.version);
-            restTemplate.setHeaders(headers);
-            return restTemplate.postForEntity(remoteURL, body, String.class);
-            // TODO: ADD APPLCIATION HEADER VALUE 
+            headers.add("App-Version", this.getAppVersion());
+            headers.add("HOST-NAME", HOSTNAME);
+            return ResponseEntity.ok().headers(headers).body(String.format(RESPONSE_STRING_FORMAT, response.trim()));
+
         } catch (HttpStatusCodeException ex) {
             logger.warn("Exception trying to post to preference service.", ex);
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
@@ -96,12 +95,13 @@ public class CustomerController {
             if (userPreference != null && !userPreference.isEmpty()) {
                 tracer.activeSpan().setBaggageItem("user-preference", userPreference);
             }
-            // TODO: ADD APPLCIATION HEADER VALUE
-            ResponseEntity<String> responseEntity = restTemplate.getForEntity(remoteURL, String.class);
-            String response = responseEntity.getBody();
+
+            String response = restTemplate.getForEntity(remoteURL, String.class).getBody();
             HttpHeaders headers = new HttpHeaders();
-            headers.add("AppVersion", this.version);
-            return ResponseEntity.ok(String.format(RESPONSE_STRING_FORMAT, response.trim())).setHeaders(headers);
+            headers.add("App-Version", this.getAppVersion());
+            headers.add("HOST-NAME", HOSTNAME);
+            return ResponseEntity.ok().headers(headers).body(String.format(RESPONSE_STRING_FORMAT, response.trim()));
+
         } catch (HttpStatusCodeException ex) {
             logger.warn("Exception trying to get the response from preference service.", ex);
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)

@@ -1,7 +1,5 @@
 package com.redhat.developer.demos.preference;
 
-import com.sun.tools.javac.resources.version;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,7 +27,6 @@ public class PreferencesController {
 
     public PreferencesController(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
-        this.restTemplate.setHeaders("App-Version", this.getAppVersion());
     }
 
     // SB 1.5.X actuator does not allow subpaths on custom health checks URL/do in easy way
@@ -55,7 +52,12 @@ public class PreferencesController {
     @RequestMapping(value = "/", method = RequestMethod.POST, consumes = "text/plain")
     public ResponseEntity<String> addRecommendation(@RequestBody String body) {
         try {
-            return restTemplate.postForEntity(remoteURL, body, String.class);
+
+            String response = restTemplate.postForEntity(remoteURL, body, String.class).getBody();
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("App-Version", this.getAppVersion());
+            return ResponseEntity.ok().headers(headers).body(String.format(RESPONSE_STRING_FORMAT, response.trim()));
+
         } catch (HttpStatusCodeException ex) {
             logger.warn("Exception trying to post to recommendation service.", ex);
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
@@ -70,11 +72,12 @@ public class PreferencesController {
     @RequestMapping("/")
     public ResponseEntity<?> getPreferences() {
         try {
-            ResponseEntity<String> responseEntity = restTemplate.getForEntity(remoteURL, String.class);
-            String response = responseEntity.getBody();
+
+            String response = restTemplate.getForEntity(remoteURL, String.class).getBody();
             HttpHeaders headers = new HttpHeaders();
-            headers.add("AppVersion", this.version);
-            return ResponseEntity.ok(String.format(RESPONSE_STRING_FORMAT, response.trim())).setHeaders(headers);
+            headers.add("App-Version", this.getAppVersion());
+            return ResponseEntity.ok().headers(headers).body(String.format(RESPONSE_STRING_FORMAT, response.trim()));
+
         } catch (HttpStatusCodeException ex) {
             logger.warn("Exception trying to get the response from recommendation service.", ex);
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
